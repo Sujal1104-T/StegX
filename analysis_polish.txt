@@ -1,0 +1,12 @@
+Analyzing StegX...                                              
+
+  error - The method '_getStableSeed' isn't defined for the type 'StegoService' - lib\data\stego_service.dart:31:18 - undefined_method
+  error - The method '_getStableSeed' isn't defined for the type 'StegoService' - lib\data\stego_service.dart:106:18 - undefined_method
+   info - The local variable '_getStableSeed' starts with an underscore - lib\data\stego_service.dart:261:11 - no_leading_underscores_for_local_identifiers
+warning - The declaration '_getStableSeed' isn't referenced - lib\data\stego_service.dart:261:11 - unused_element
+  error - The named parameter 'children' isn't defined - lib\presentation\screens\decrypt_screen.dart:34:11 - undefined_named_parameter
+  error - Expected to find ')' - lib\presentation\screens\decrypt_screen.dart:163:6 - expected_token
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\cyberpunk_loader.dart:18:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\cyberpunk_loader.dart:37:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\widgets\cyberpunk_loader.dart:64:40 - deprecated_member_use
+

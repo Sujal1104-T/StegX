@@ -1,0 +1,5 @@
+Analyzing StegX...                                              
+
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\decrypt_screen.dart:116:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\presentation\screens\encrypt_screen.dart:117:46 - deprecated_member_use
+
