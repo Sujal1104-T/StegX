@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "233214734477",
+    "project_id": "stegx-607ce",
+    "storage_bucket": "stegx-607ce.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:233214734477:android:4e3ab5f905eebe38a132c4",
+        "android_client_info": {
+          "package_name": "com.StegX"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "233214734477-7dbj5qua519ce749luej8ifqgauvrom7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoSkykIiCgan3XsHKjJJS6FlHnvvHeXQo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "233214734477-7dbj5qua519ce749luej8ifqgauvrom7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
