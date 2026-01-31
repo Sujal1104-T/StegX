@@ -19,4 +19,4 @@ This repository is for **demonstration purposes only**.
 ## License
 
 **READ-ONLY ACCESS.** 
-Downloading, modifying, or distributing this code without permission is strictly prohibited. See [LICENSE](LICENSE) for details.
+Copying, modifying, reusing, or distributing any part of this code without permission is strictly prohibited.
