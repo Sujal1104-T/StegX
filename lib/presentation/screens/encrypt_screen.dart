@@ -22,6 +22,10 @@ class _EncryptScreenState extends ConsumerState<EncryptScreen> {
     final state = ref.watch(encryptionProvider);
     final theme = Theme.of(context);
     final isProcessing = state.isProcessing;
+    
+    // Debug: Check if processing state changes
+    print('🔍 Encrypt Screen - isProcessing: $isProcessing');
+
 
     return Scaffold(
       appBar: AppBar(
@@ -192,11 +196,12 @@ class _EncryptScreenState extends ConsumerState<EncryptScreen> {
             ),
           ),
           
-          // Full Screen Loader
-          if (isProcessing)
-             Positioned.fill(
-               child: CyberpunkLoader(statusText: 'ENCRYPTING_DATA'),
-             ),
+          // Full Screen Loader - Simplified for visibility
+          if (isProcessing) ...[
+            const Positioned.fill(
+              child: CyberpunkLoader(statusText: 'ENCRYPTING'),
+            ),
+          ],
         ],
       ),
     );

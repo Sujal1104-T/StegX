@@ -154,11 +154,12 @@ class _DecryptScreenState extends ConsumerState<DecryptScreen> {
             ),
           ),
           
-          // Loading Overlay
-          if (isProcessing)
-            Positioned.fill(
-              child: CyberpunkLoader(statusText: 'DECRYPTING...'),
+          // Loading Overlay - Simplified for visibility
+          if (isProcessing) ...[
+            const Positioned.fill(
+              child: CyberpunkLoader(statusText: 'DECRYPTING'),
             ),
+          ],
         ],
       ),
     );

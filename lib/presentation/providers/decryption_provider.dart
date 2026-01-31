@@ -83,6 +83,9 @@ class DecryptionNotifier extends StateNotifier<DecryptionState> {
     state = state.copyWith(isProcessing: true, error: null, decryptedText: null);
 
     try {
+      // Minimum display time for loader (so users see the animation)
+      final startTime = DateTime.now();
+      
       // 1. Read Image Bytes
       final imageBytes = state.selectedImageBytes!;
       final trimmedKey = key.trim(); // CRITICAL: remove whitespace
@@ -95,6 +98,12 @@ class DecryptionNotifier extends StateNotifier<DecryptionState> {
 
       // 3. Decrypt String
       final plainText = _crypto.decrypt(encryptedData: extractedData, key: trimmedKey);
+
+      // Ensure loader shows for at least 3 seconds (so users definitely see it)
+      final elapsed = DateTime.now().difference(startTime);
+      if (elapsed.inMilliseconds < 3000) {
+        await Future.delayed(Duration(milliseconds: 3000 - elapsed.inMilliseconds));
+      }
 
       state = state.copyWith(isProcessing: false, decryptedText: plainText, attempts: 0);
 

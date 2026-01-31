@@ -83,11 +83,17 @@ class EncryptionNotifier extends StateNotifier<EncryptionState> {
     }
 
     state = state.copyWith(isProcessing: true, error: null);
+    
+    // CRITICAL: Give Flutter a chance to rebuild UI with loader
+    await Future.delayed(const Duration(milliseconds: 100));
 
     try {
+      // Minimum display time for loader (so users see the animation)
+      final startTime = DateTime.now();
+      
       // 1. Generate Key
       final key = _crypto.generateKey();
-
+      
       // 2. Encrypt Message
       // Use compute if the text is huge, but usually fine here.
       final encryptedMessage = _crypto.encrypt(plainText: secretText.trim(), key: key);
@@ -101,6 +107,12 @@ class EncryptionNotifier extends StateNotifier<EncryptionState> {
       });
 
       if (stegoBytes == null) throw Exception("Embedding failed.");
+
+      // Ensure loader shows for at least 3 seconds (so users definitely see it)
+      final elapsed = DateTime.now().difference(startTime);
+      if (elapsed.inMilliseconds < 3000) {
+        await Future.delayed(Duration(milliseconds: 3000 - elapsed.inMilliseconds));
+      }
 
       state = state.copyWith(
         isProcessing: false,

@@ -1,16 +1,22 @@
-# stegx
+# StegX - Cyberpunk Steganography Tool
 
-A new Flutter project.
+StegX is a secure image steganography application with a cyberpunk-themed interface. It allows users to hide encrypted messages inside images using advanced pixel manipulation techniques.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **Secure Encryption**: Uses AES encryption to secure messages before embedding.
+- **Steganography**: Hides encrypted data within image pixels invisibly.
+- **Cyberpunk UI**: Immersive dark-mode interface with neon aesthetics and animations.
+- **History Tracking**: Keeps a local log of encrypted/decrypted files (Firebase integrated).
+- **Cross-Platform**: Built with Flutter for Android, iOS, and Web.
 
-A few resources to get you started if this is your first Flutter project:
+## Security Warning
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+This repository is for **demonstration purposes only**. 
+- API keys and configuration files (`google-services.json`, `firebase_options.dart`) have been excluded for security.
+- To run this locally, you must provide your own Firebase configuration.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## License
+
+**READ-ONLY ACCESS.** 
+Downloading, modifying, or distributing this code without permission is strictly prohibited. See [LICENSE](LICENSE) for details.

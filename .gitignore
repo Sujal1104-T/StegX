@@ -40,6 +40,32 @@ app.*.symbols
 app.*.map.json
 
 # Android Studio will place build artifacts here
+# Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase - SECURITY (Do not commit these)
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+lib/firebase_options.dart
+.firebase/
+firebase-debug.log
+
+# Environment Variables
+.env
+.env.*
+
+# Local VS Code settings
+.vscode/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
