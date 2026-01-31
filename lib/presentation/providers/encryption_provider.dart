@@ -5,6 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import 'package:stegx/data/crypto_service.dart';
 import 'package:stegx/data/stego_service.dart';
+import 'package:stegx/data/models/history_model.dart';
+import 'package:stegx/presentation/providers/history_provider.dart';
+import 'package:stegx/presentation/providers/auth_provider.dart';
+import 'package:stegx/presentation/providers/settings_provider.dart';
 
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart'; // for compute
@@ -44,11 +48,13 @@ class EncryptionState {
 
 // Provider
 final encryptionProvider = StateNotifierProvider.autoDispose<EncryptionNotifier, EncryptionState>((ref) {
-  return EncryptionNotifier();
+  return EncryptionNotifier(ref);
 });
 
 class EncryptionNotifier extends StateNotifier<EncryptionState> {
-  EncryptionNotifier() : super(EncryptionState());
+  final Ref _ref;
+  
+  EncryptionNotifier(this._ref) : super(EncryptionState());
 
   final _picker = ImagePicker();
   final _crypto = CryptoService();
@@ -101,6 +107,27 @@ class EncryptionNotifier extends StateNotifier<EncryptionState> {
         generatedKey: key,
         processedImageBytes: stegoBytes,
       );
+
+      // Log to history if auto-save is enabled
+      try {
+        final settings = _ref.read(settingsProvider);
+        if (settings.autoSaveHistory) {
+          final user = _ref.read(authStateProvider).value;
+          if (user != null) {
+            final historyItem = HistoryItem(
+              id: '',
+              userId: user.uid,
+              type: HistoryType.encrypt,
+              timestamp: DateTime.now(),
+              imageName: 'encrypted_image.png',
+              messageLength: secretText.length,
+            );
+            _ref.read(historyProvider.notifier).addHistoryItem(historyItem);
+          }
+        }
+      } catch (_) {
+        // Ignore history logging errors
+      }
 
     } catch (e) {
       state = state.copyWith(isProcessing: false, error: e.toString());

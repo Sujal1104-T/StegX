@@ -4,7 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:stegx/presentation/screens/encrypt_screen.dart';
 import 'package:stegx/presentation/screens/decrypt_screen.dart';
-import 'package:stegx/presentation/providers/auth_provider.dart';
+import 'package:stegx/presentation/widgets/drawer_menu.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -14,21 +14,16 @@ class HomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     
     return Scaffold(
+      drawer: const DrawerMenu(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout, color: theme.primaryColor),
-            tooltip: 'Sign Out',
-            onPressed: () async {
-              await ref.read(authProvider.notifier).signOut();
-              if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: theme.primaryColor),
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
-        ],
+        ),
       ),
       body: Stack(
         children: [

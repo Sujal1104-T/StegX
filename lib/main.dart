@@ -7,6 +7,9 @@ import 'package:stegx/presentation/screens/login_screen.dart';
 import 'package:stegx/presentation/screens/home_screen.dart';
 import 'package:stegx/presentation/screens/encrypt_screen.dart';
 import 'package:stegx/presentation/screens/decrypt_screen.dart';
+import 'package:stegx/presentation/screens/history_screen.dart';
+import 'package:stegx/presentation/screens/settings_screen.dart';
+import 'package:stegx/presentation/screens/help_screen.dart';
 import 'package:stegx/presentation/providers/auth_provider.dart';
 import 'package:stegx/presentation/theme/theme.dart';
 
@@ -34,6 +37,9 @@ class StegXApp extends ConsumerWidget {
         '/home': (context) => const AuthGuard(child: HomeScreen()),
         '/encrypt': (context) => const AuthGuard(child: EncryptScreen()),
         '/decrypt': (context) => const AuthGuard(child: DecryptScreen()),
+        '/history': (context) => const AuthGuard(child: HistoryScreen()),
+        '/settings': (context) => const AuthGuard(child: SettingsScreen()),
+        '/help': (context) => const AuthGuard(child: HelpScreen()),
       },
     );
   }

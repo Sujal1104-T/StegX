@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart'; // for compute
 import 'package:image_picker/image_picker.dart';
 import 'package:stegx/data/crypto_service.dart';
 import 'package:stegx/data/stego_service.dart';
+import 'package:stegx/data/models/history_model.dart';
+import 'package:stegx/presentation/providers/history_provider.dart';
+import 'package:stegx/presentation/providers/auth_provider.dart';
+import 'package:stegx/presentation/providers/settings_provider.dart';
 
 class DecryptionState {
   final Uint8List? selectedImageBytes;
@@ -38,11 +42,13 @@ class DecryptionState {
 }
 
 final decryptionProvider = StateNotifierProvider.autoDispose<DecryptionNotifier, DecryptionState>((ref) {
-  return DecryptionNotifier();
+  return DecryptionNotifier(ref);
 });
 
 class DecryptionNotifier extends StateNotifier<DecryptionState> {
-  DecryptionNotifier() : super(DecryptionState());
+  final Ref _ref;
+  
+  DecryptionNotifier(this._ref) : super(DecryptionState());
 
   final _picker = ImagePicker();
   final _crypto = CryptoService();
@@ -92,6 +98,9 @@ class DecryptionNotifier extends StateNotifier<DecryptionState> {
 
       state = state.copyWith(isProcessing: false, decryptedText: plainText, attempts: 0);
 
+      // Log successful decryption to history
+      _logDecryptionHistory(success: true);
+
     } catch (e) {
       // Security measure: Increment attempts
       // In a real app we might delay response to prevent timing attacks
@@ -101,6 +110,31 @@ class DecryptionNotifier extends StateNotifier<DecryptionState> {
         error: "Decryption Failed: Invalid Key ($key) or Corrupted Data.",
         attempts: state.attempts + 1
       );
+
+      // Log failed decryption to history
+      _logDecryptionHistory(success: false);
+    }
+  }
+
+  void _logDecryptionHistory({required bool success}) {
+    try {
+      final settings = _ref.read(settingsProvider);
+      if (settings.autoSaveHistory) {
+        final user = _ref.read(authStateProvider).value;
+        if (user != null) {
+          final historyItem = HistoryItem(
+            id: '',
+            userId: user.uid,
+            type: HistoryType.decrypt,
+            timestamp: DateTime.now(),
+            imageName: 'decrypted_image.png',
+            success: success,
+          );
+          _ref.read(historyProvider.notifier).addHistoryItem(historyItem);
+        }
+      }
+    } catch (_) {
+      // Ignore history logging errors
     }
   }
   
