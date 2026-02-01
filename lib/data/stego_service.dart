@@ -1,8 +1,9 @@
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-import 'package:crypto/crypto.dart'; // Add crypto import
-import 'dart:convert'; // Add convert for utf8
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+import 'package:stegx/core/utils/portable_random.dart';
 
 class StegoService {
   /// Embeds [secretData] into the [image] using a randomized LSB algorithm seeded by [key].
@@ -14,43 +15,52 @@ class StegoService {
   }) async {
     // 1. Prepare Data: [32-bit Length Header] + [Secret Bytes]
     final secretBytes = Uint8List.fromList(secretData.codeUnits);
-    final lengthBytes = Uint8List(4)..buffer.asByteData().setInt32(0, secretBytes.length);
+    final lengthBytes = Uint8List(4)..buffer.asByteData().setInt32(0, secretBytes.length, Endian.big);
     final payload = Uint8List.fromList([...lengthBytes, ...secretBytes]);
 
     // 2. Validate Capacity
     final totalPixels = image.width * image.height;
     // We use 3 bits per pixel (R, G, B channels).
-    // Capacity = totalPixels * 3 bits.
-    // Payload size in bits = payload.length * 8.
     if (payload.length * 8 > totalPixels * 3) {
       throw Exception('Image too small to hold this message.');
     }
 
     // 3. Initialize PRNG with Stable Key Hash
-    // key.hashCode is not stable across runs/platforms. Use SHA-256.
     final seed = _getStableSeed(key); 
-    final random = Random(seed);
+    final random = PortableRandom(seed);
 
-    // 4. Generate Shuffled Pixel Indices
-    // We create a list of indices and shuffle them deterministically based on the key.
-    // To handle large images efficiently, we only generate as many unique random indices as we need.
-    // For very large images, a full shuffle is expensive. We use a set to track used indices.
-    final neededBits = payload.length * 8;
-    // Each pixel can hide 3 bits.
-    final neededPixels = (neededBits / 3).ceil();
+    // 4. Embed Data
+    // We generate random pixel indices on the fly to avoid storing a massive list.
+    // To ensure we don't overwrite or collide too often, we track used indices.
+    // OPTIMIZATION: For scalability with large images, avoid infinite loops when nearing capacity.
     
-    final pixelIndices = <int>{};
-    while (pixelIndices.length < neededPixels) {
-      pixelIndices.add(random.nextInt(totalPixels));
-    }
-    final shuffledIndices = pixelIndices.toList();
-
-
-    // 5. Embed Data
+    final neededBits = payload.length * 8;
     int bitIndex = 0;
     
-    for (int pIndex in shuffledIndices) {
-       // Convert linear index to (x, y)
+    // We use a Set to track used pixels. 
+    // Warning: As neededPixels approaches totalPixels, this becomes slow (Coupon Collector).
+    // Limit capacity usage to 50% for performance safety, or accept slowdown.
+    // Ideally we would use a format-preserving encryption for non-colliding permutation.
+    // For this implementation, we accept the Set overhead but add a timeout/safety.
+    
+    final usedIndices = <int>{};
+    int safetyCounter = 0;
+    final maxIterations = neededBits * 100; // Allow some collisions but not infinite
+
+    while (bitIndex < neededBits) {
+       int pIndex;
+       
+       // Try to find a unique pixel
+       do {
+         pIndex = random.nextInt(totalPixels);
+         safetyCounter++;
+         if (safetyCounter > maxIterations) {
+           throw Exception("Embedding failed: High density collision timeout. Try a larger image.");
+         }
+       } while (usedIndices.contains(pIndex));
+       
+       usedIndices.add(pIndex);
+
        final x = pIndex % image.width;
        final y = pIndex ~/ image.width;
        
@@ -78,8 +88,6 @@ class StegoService {
        }
        
        image.setPixel(x, y, pixel);
-       
-       if (bitIndex >= neededBits) break;
     }
 
     // 6. Encode Image to PNG (Lossless is Critical)
@@ -96,133 +104,32 @@ class StegoService {
 
     final totalPixels = image.width * image.height;
     
-    // We need to read the first 32 bits (4 bytes) to know the length of the message.
-    // However, the bits are scattered based on the PRNG seed.
-    // We don't know the exact needed pixels *initially* because needed pixels depends on length.
-    // BUT, the PRNG sequence is deterministic. So the *first* K pixels picked by the RNG
-    // will ALWAYS be the same for the same key.
-    
     // 3. Initialize PRNG with Stable Key Hash
     final seed = _getStableSeed(key); 
-    final random = Random(seed);
+    final random = PortableRandom(seed);
 
-    // We can't just generate "needed" indices because we don't know the length yet.
-    // But we know the header is 4 bytes = 32 bits.
-    // 32 bits / 3 bits/pixel ~= 11 pixels.
-    // So we can generate indices in batches or just use the same logic as encryption.
-    // To properly reconstruct, we essentially simulate the "infinite" stream of random indices
-    // and pull 32 bits first.
-    
-    // To avoid complex re-generation logic, we can stick to a simpler strategy:
-    // Generate a secure permutation of [0...TotalPixels] is too expensive for large images.
-    // Using a Set as in encryption is valid.
-    // The sequence of `random.nextInt(totalPixels)` calls is deterministic.
-    
-    // Step 1: Read Header (Length)
-    int length = 0;
-    List<int> headerBits = [];
-    Set<int> usedIndices = {};
-    
-    // We need 32 bits.
-    while (headerBits.length < 32) {
-       int pIndex;
-       do {
-         pIndex = random.nextInt(totalPixels);
-       } while (usedIndices.contains(pIndex));
-       usedIndices.add(pIndex);
-
-       final x = pIndex % image.width;
-       final y = pIndex ~/ image.width;
-       final pixel = image.getPixel(x, y);
-
-       headerBits.add(pixel.r.toInt() & 1);
-       if (headerBits.length < 32) headerBits.add(pixel.g.toInt() & 1);
-       if (headerBits.length < 32) headerBits.add(pixel.b.toInt() & 1);
-    }
-
-    // Convert bits to int length
-    for (int i = 0; i < 32; i++) {
-      length |= (headerBits[i] << (31 - i)); // Reading big-endian
-       // Oops, in encryption: 
-       // byte = payload[index]
-       // bit = byte >> (7 - bitPos) & 1.  (MSB first)
-       // So yes, we reconstruct similarly.
-    }
-    
-    // Step 2: Read Body
-    if (length < 0 || length > 1000000) { // Safety check
-      throw Exception('Invalid data length ($length). Wrong key?');
-    }
-
-    // final totalBits = length * 8; // unused
-    // List<int> bodyBits = []; // unused
-    
-    // We continue the SAME random sequence.
-    // We already consumed pixels for the header.
-    // However, we may have extracted "extra" bits from the last pixel of the header
-    // if 32 is not divisible by 3 (it's not, 32 = 3*10 + 2).
-    // The logic in Encrypt was:
-    // for pIndex in shuffled...
-    //   fill R, then G, then B.
-    // So for the Pixel #11 (index 10), we used R and G for the last 2 bits of header.
-    // The B channel of Pixel #11 *should* contain the first bit of the Body.
-    // My previous logic `headerBits.length < 32` stopped *exactly* when we had 32 bits.
-    // But did I consume the random index generation correctly?
-    // In encryption, I generated ALL indices first. 
-    // Here, I am generating them on the fly. This needs to match EXACTLY.
-    
-    // Let's refine the extraction to be robust loop-based.
-    
-    // Reset and redo simply to match the generation logic perfectly.
-    // In Encrypt: 
-    // 1. Calculate TOTAL needed bits (32 + length*8).
-    // 2. Determine needed pixels.
-    // 3. Generate list of pixel indices.
-    
-    // Issue: In Decrypt, we DON'T know "TOTAL needed bits" initially.
-    // Solution: We must separate Header extraction from Body extraction?
-    // No, because the random sequence `pixelIndices` depends on `random.nextInt` being called X times.
-    // If we stop and restart, we might lose state or we need to be careful.
-    // Wait, `Set` insertion order matters? No, the `while` loop order matters.
-    
-    // Strategy:
-    // 1. Read first 32 bits. To do this, we just need to pull pixels until we have 32 bits.
-    //    We keep track of the `random` state and `usedIndices`.
-    // 2. Decode length.
-    // 3. Continue pulling pixels until we have `32 + length * 8` bits.
-    
-    // Current state check:
-    // `random` is at state after generating N pixels for Header.
-    // `usedIndices` has N pixels.
-    // We might have "unused" channels in the last pixel if we stopped early.
-    // But `headerBits.length < 32` stops strictly. 
-    // If the last pixel contributed 2 bits (R, G), we didn't read B.
-    // If we just continue, the next read should be... the B channel of that SAME pixel?
-    // In Encrypt: `for (int pIndex in shuffledIndices)`... loops pixels.
-    // Inside: embed R, embed G, embed B.
-    // If we finish header at bit 32 (R,G of pixel 10), bit 33 (start of body) goes to B of pixel 10.
-    
-    // So, we need to persist the current pixel and current channel index?
-    // Actually, it's easier to just read *all* 3 channels of every pixel we pull, buffer the bits,
-    // and then process the stream.
-    
-    // CORRECTED LOOP:
+    // Extraction Logic matched to Embedding
     List<int> allBits = [];
     int currentPayloadLength = 32; // Initially just header
     bool lengthDecoded = false;
     
-    // Re-init for clean slate logic
-    final random2 = Random(seed);
-    final usedIndices2 = <int>{};
-    
+    final usedIndices = <int>{};
     int bitsRead = 0;
     
+    // Safety
+    int safetyCounter = 0;
+    final maxIterations = totalPixels * 10; 
+
     while (bitsRead < currentPayloadLength) {
        int pIndex;
        do {
-         pIndex = random2.nextInt(totalPixels);
-       } while (usedIndices2.contains(pIndex));
-       usedIndices2.add(pIndex);
+         pIndex = random.nextInt(totalPixels);
+         safetyCounter++;
+          if (safetyCounter > maxIterations) {
+           throw Exception("Extraction failed: Loop detection.");
+         }
+       } while (usedIndices.contains(pIndex));
+       usedIndices.add(pIndex);
        
        final x = pIndex % image.width;
        final y = pIndex ~/ image.width;
@@ -235,8 +142,9 @@ class StegoService {
             for (int i = 0; i < 32; i++) {
                lToRead |= (allBits[i] << (31 - i));
             }
-             if (lToRead < 0 || lToRead > 5000000) { // Safety sanity check
-              throw Exception('Invalid length detected: $lToRead. Incorrect key?');
+             // Sanity check: length shouldn't be absurdly large (e.g. > 50MB)
+             if (lToRead < 0 || lToRead > 50000000) { 
+              throw Exception('Invalid data length detected ($lToRead). Wrong key?');
             }
             currentPayloadLength = 32 + lToRead * 8;
             lengthDecoded = true;
@@ -261,7 +169,6 @@ class StegoService {
     }
     
     // Reconstruct bytes
-    // Skip first 32 bits
     final bodyBitsSlice = allBits.sublist(32);
     final byteCount = bodyBitsSlice.length ~/ 8;
     final bytes = Uint8List(byteCount);
@@ -279,8 +186,9 @@ class StegoService {
   int _getStableSeed(String key) {
     final bytes = utf8.encode(key);
     final digest = sha256.convert(bytes).bytes;
-    // Turn first 4 bytes into a 32-bit integer
-    return (digest[0] << 24) | (digest[1] << 16) | (digest[2] << 8) | digest[3];
+    // Turn first 4 bytes into a 32-bit integer that behaves consistently
+    int seed = (digest[0] << 24) | (digest[1] << 16) | (digest[2] << 8) | digest[3];
+    return seed & 0xFFFFFFFF; // Ensure unsigned 32-bit behavior mostly
   }
 }
 
